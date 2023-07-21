@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <optional>
 #include <exception>
@@ -65,11 +65,12 @@ public:
                 {    "year", required_argument, nullptr, 'y' },
                 {   "track", required_argument, nullptr, 'T' },
                 {   "genre", required_argument, nullptr, 'g' },
+                { "comment", required_argument, nullptr, 'c' },
                 {   nullptr,                 0, nullptr,  0  }
             };
 
             int option_index = 0;
-            int c = getopt_long(argc, argv.data(), "hva:t:A:y:T:g:", options, &option_index);
+            int c = getopt_long(argc, argv.data(), "hva:t:A:y:T:g:c:", options, &option_index);
             if (c == -1)
                 break;
 
@@ -102,6 +103,9 @@ public:
                 break;
             case 'g':
                 args.m_genre = optarg;
+                break;
+            case 'c':
+                args.m_comment = optarg;
                 break;
             default:
                 throw arguments_parse_exception();
@@ -164,6 +168,11 @@ public:
         return { m_genre.has_value(), m_genre.value_or("") };
     }
 
+    std::pair<bool, std::string> comment() const
+    {
+        return { m_comment.has_value(), m_comment.value_or("") };
+    }
+
 private:
     bool m_help;
     bool m_version;
@@ -174,4 +183,5 @@ private:
     std::optional<std::string> m_year;
     std::optional<std::string> m_track;
     std::optional<std::string> m_genre;
+    std::optional<std::string> m_comment;
 };

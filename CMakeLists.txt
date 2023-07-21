@@ -18,6 +18,5 @@ add_executable(id3-tag-cli
   src/arguments.hpp
   src/help.hpp
   src/main.cpp
-  src/platform.hpp
-  src/settings.hpp)
+  src/platform.hpp)
 target_link_libraries(id3-tag-cli Taglib::Taglib)

@@ -6,6 +6,7 @@
 TAGLIB_HEADERS_BEGIN
   #include <taglib/tag.h>
   #include <taglib/fileref.h>
+  #include <taglib/tpropertymap.h>
 TAGLIB_HEADERS_END
 
 #include "arguments.hpp"
@@ -47,11 +48,12 @@ bool process_file(arguments&& args)
     auto [year_valid, year] = args.year();
     auto [track_valid, track] = args.track();
     auto [genre_valid, genre] = args.genre();
+    auto [comment_valid, comment] = args.comment();
 
     auto utf8string = [](const std::string& str) -> TagLib::String
     {
         if (str.empty())
-            return TagLib::String::null;
+            return TagLib::String();
         return TagLib::String(str, TagLib::String::Type::UTF8);
     };
 
@@ -68,6 +70,7 @@ bool process_file(arguments&& args)
     processed |= process_field(tag, &TagLib::Tag::setYear, args.year(), stoi);
     processed |= process_field(tag, &TagLib::Tag::setTrack, args.track(), stoi);
     processed |= process_field(tag, &TagLib::Tag::setGenre, args.genre(), utf8string);
+    processed |= process_field(tag, &TagLib::Tag::setComment, args.comment(), utf8string);
 
     if (processed)
     {
@@ -75,13 +78,47 @@ bool process_file(arguments&& args)
         return true;
     }
 
-    std::cout << "Information for file " << file_name << std::endl;
-    print_field("Artist", tag.artist().to8Bit(true));
-    print_field(" Title", tag.title().to8Bit(true));
-    print_field(" Album", tag.album().to8Bit(true));
-    print_field("  Year", tag.year());
-    print_field(" Track", tag.track());
-    print_field(" Genre", tag.genre().to8Bit(true));
+    if (!file.isNull() && file.tag())
+    {
+        std::cout << "Information for file " << file_name << std::endl;
+        print_field(" Artist", tag.artist().to8Bit(true));
+        print_field("  Title", tag.title().to8Bit(true));
+        print_field("  Album", tag.album().to8Bit(true));
+        print_field("   Year", tag.year());
+        print_field("  Track", tag.track());
+        print_field("  Genre", tag.genre().to8Bit(true));
+        print_field("Comment", tag.comment().to8Bit(true));
+
+        TagLib::PropertyMap tags = file.file()->properties();
+        
+        unsigned int longest = 0;
+        for(TagLib::PropertyMap::ConstIterator i = tags.begin(); i != tags.end(); ++i)
+        {
+            if (i->first.size() > longest)
+            {
+                longest = i->first.size();
+            }
+        }
+        
+        std::cout << "-- TAG (properties) --" << std::endl;
+        for(TagLib::PropertyMap::ConstIterator i = tags.begin(); i != tags.end(); ++i)
+            for(TagLib::StringList::ConstIterator j = i->second.begin(); j != i->second.end(); ++j)
+                std::cout << std::left << std::setw(longest) << i->first << " - " << '"' << j->to8Bit(true) << '"' << std::endl;
+    }
+
+    if (!file.isNull() && file.audioProperties())
+    {
+        TagLib::AudioProperties *properties = file.audioProperties();
+        
+        int seconds = properties->length() % 60;
+        int minutes = (properties->length() - seconds) / 60;
+        
+        std::cout << "-- AUDIO --" << std::endl;
+        std::cout << "bitrate     - " << properties->bitrate() << std::endl;
+        std::cout << "sample rate - " << properties->sampleRate() << std::endl;
+        std::cout << "channels    - " << properties->channels() << std::endl;
+        std::cout << "length      - " << minutes << ":" << std::setfill('0') << std::setw(2) << seconds << std::endl;
+    }
 
     return true;
 }
