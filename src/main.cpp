@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <optional>
 
 #include "platform.hpp"
@@ -48,7 +48,7 @@ bool process_file(arguments&& args)
     auto [track_valid, track] = args.track();
     auto [genre_valid, genre] = args.genre();
 
-    auto utf8string = [](const std::string& str)
+    auto utf8string = [](const std::string& str) -> TagLib::String
     {
         if (str.empty())
             return TagLib::String::null;

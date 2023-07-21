@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <vector>
 #include <iostream>
@@ -45,6 +45,9 @@ namespace platform
 #elif __unix__
     using char_t = char;
     using string = std::string; // linux should use UTF8
+#elif __APPLE__
+    using char_t = char;
+    using string = std::string; // macOS should use UTF8
 #else
     static_assert("Error: Unknown platform");
 #endif
