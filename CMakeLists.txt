@@ -14,9 +14,25 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(Taglib REQUIRED)
 
+include(FetchContent)
+macro(fetch_dependency name repo tag)
+  FetchContent_Declare(${name}
+    GIT_REPOSITORY ${repo}
+    GIT_TAG ${tag}
+  )
+  FetchContent_GetProperties(${name})
+  if (NOT ${name}_POPULATED)
+    message(STATUS "Populating ${name} dependencies")
+    FetchContent_Populate(${name})
+  endif()
+endmacro()
+
+fetch_dependency(cli11 https://github.com/CLIUtils/CLI11.git v2.3.2)
+add_subdirectory(${cli11_SOURCE_DIR})
+
 add_executable(id3-tag-cli
   src/arguments.hpp
   src/help.hpp
   src/main.cpp
   src/platform.hpp)
-target_link_libraries(id3-tag-cli Taglib::Taglib)
+target_link_libraries(id3-tag-cli Taglib::Taglib CLI11)

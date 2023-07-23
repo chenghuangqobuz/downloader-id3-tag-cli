@@ -1,3 +1,5 @@
+#include <CLI/CLI.hpp>
+
 #include <iostream>
 #include <optional>
 
@@ -14,8 +16,8 @@ TAGLIB_HEADERS_END
 
 // SetF is void(TagLib::Tag::* setter)(T), for some T.
 // ConvF is T(*convert)(std::string) for SetF's T.
-template<typename SetF, typename ConvF>
-bool process_field(TagLib::Tag& tag, SetF setter, const std::pair<bool, std::string>& info, ConvF convert)
+template<typename SetF, typename ValueF, typename ConvF>
+bool process_field(TagLib::Tag& tag, SetF setter, const std::pair<bool, ValueF>& info, ConvF convert)
 {
     auto& [valid, data] = info;
     if (valid)
@@ -34,7 +36,7 @@ void print_field(const std::string& field_name, const T& field_value)
 
 bool process_file(arguments&& args)
 {
-    platform::string file_name = platform::convert::to_platform(args.file_name());
+    platform::string file_name = args.file_name();
     TagLib::FileRef file(file_name.c_str());
     
     if (file.isNull())
@@ -57,18 +59,17 @@ bool process_file(arguments&& args)
         return TagLib::String(str, TagLib::String::Type::UTF8);
     };
 
-    // ReSharper disable once IdentifierTypo
-    auto stoi = [](const std::string& str)
+    auto itoi = [](const int& i)
     {
-        return std::stoi(str); // overload
+        return i;
     };
 
     bool processed = false;
     processed |= process_field(tag, &TagLib::Tag::setArtist, args.artist(), utf8string);
     processed |= process_field(tag, &TagLib::Tag::setTitle, args.title(), utf8string);
     processed |= process_field(tag, &TagLib::Tag::setAlbum, args.album(), utf8string);
-    processed |= process_field(tag, &TagLib::Tag::setYear, args.year(), stoi);
-    processed |= process_field(tag, &TagLib::Tag::setTrack, args.track(), stoi);
+    processed |= process_field(tag, &TagLib::Tag::setYear, args.year(), itoi);
+    processed |= process_field(tag, &TagLib::Tag::setTrack, args.track(), itoi);
     processed |= process_field(tag, &TagLib::Tag::setGenre, args.genre(), utf8string);
     processed |= process_field(tag, &TagLib::Tag::setComment, args.comment(), utf8string);
 
@@ -128,36 +129,36 @@ constexpr static const int RETURN_ERROR = 1;
 
 int MAIN(int argc, platform::char_t* argv[])
 {
-    std::string exe_name = platform::convert::from_platform(argv[0]);
-
-    std::optional<arguments> args;
+    CLI::App app("id3-tag-cli");
+    app.footer("If no argument is specified, information of given file is retrieved.\n"
+               "If the option is not specified, the value is unchanged.\n"
+               "If the argument is empty string (\"\") (for [STR]) or 0 (for [INT]) the value is cleared.\n"
+               "\n"
+               "Written by Zereges <https://github.com/Zereges/id3-tag-cli>");
+    
+    arguments args;
     try
     {
-        auto arg_vec = platform::convert::convert_args(argc, argv);
-        args = arguments::parse_args(argc, arg_vec);
+        arguments::parse_args(app, argc, argv, args);
     }
-    catch (const arguments_parse_exception& ex)
+    catch (const CLI::Error& ex)
     {
-        std::cerr << ex.what() << std::endl;
-        print_usage(std::cerr, exe_name);
+        std::cerr << CLI::FailureMessage::help(&app, ex);
         return RETURN_ERROR;
     }
-
-    if (args->is_help())
+    
+    CLI11_PARSE(app, argc, argv);
+    
+    if (app.get_option("--print")->as<bool>())
     {
-        print_help(exe_name);
-        return RETURN_OK;
-    }
-    if (args->is_version())
-    {
-        print_version_info();
+        std::cout << app.config_to_str(true, true);
         return RETURN_OK;
     }
 
-    if (!process_file(std::move(args.value())))
+    if (!process_file(std::move(args)))
     {
         std::cerr << "Couldn't process given file" << std::endl;
-        print_usage(std::cerr, exe_name);
+        std::cerr << app.help();
         return RETURN_ERROR;
     }
 }

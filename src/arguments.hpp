@@ -27,11 +27,6 @@ struct arguments_parse_exception final : std::runtime_error
 
 class arguments
 {
-    arguments(bool help, bool version)
-        : m_help(help), m_version(version)
-    {
-    }
-
     static bool is_valid_int(const std::string& str)
     {
         try
@@ -45,92 +40,29 @@ class arguments
     }
 
 public:
-    static arguments parse_args(int argc, std::vector<std::string>& arg_vector)
+    static void parse_args(CLI::App& app, int argc, char** argv, arguments& args)
     {
-        std::vector<char*> argv;
-        for (int i = 0; i < argc; ++i)
-            argv.push_back(arg_vector[i].data());
-        argv.push_back(nullptr);
+        app.set_config("--config");
 
-        arguments args{false, false};
-        for (;;)
-        {
-            static option options[] =
-            {
-                {    "help",       no_argument, nullptr, 'h' },
-                { "version",       no_argument, nullptr, 'v' },
-                {  "artist", required_argument, nullptr, 'a' },
-                {   "title", required_argument, nullptr, 't' },
-                {   "album", required_argument, nullptr, 'A' },
-                {    "year", required_argument, nullptr, 'y' },
-                {   "track", required_argument, nullptr, 'T' },
-                {   "genre", required_argument, nullptr, 'g' },
-                { "comment", required_argument, nullptr, 'c' },
-                {   nullptr,                 0, nullptr,  0  }
-            };
+        app.add_flag("--print", "Print configuration and exit")->configurable(false);
+        std::function< std::string()> vfunc = std::bind(print_version_info);
+        app.set_version_flag("--version", vfunc);
 
-            int option_index = 0;
-            int c = getopt_long(argc, argv.data(), "hva:t:A:y:T:g:c:", options, &option_index);
-            if (c == -1)
-                break;
+        app.add_option("-a,--artist", args.m_artist,   "Sets the Artist/Performer.")->group("Tags");
+        app.add_option("-t,--title", args.m_title,     "Sets the Title/Song name/Content.")->group("Tags");
+        app.add_option("-A,--album", args.m_album,     "Sets the Album/Movie/Show title.")->group("Tags");
+        app.add_option("-y,--year", args.m_year,       "Sets the Year.")->group("Tags");
+        app.add_option("-T,--track", args.m_track,     "Sets the Track number/Position.")->group("Tags");
+        app.add_option("-g,--genre", args.m_genre,     "Sets the Genre.")->group("Tags");
+        app.add_option("-c,--comment", args.m_comment, "Sets the Description/Comment.")->group("Tags");
 
-            using namespace std::string_literals;
+        //app.add_option("-p,--picture", args.picture_filename, "Sets Picture contained in file.")->group("Tags")
+        //  ->check(CLI::ExistingFile);
 
-            switch (c)
-            {
-            case 'h':
-                return {true, false};
-            case 'v':
-                return {false, true};
-            case 'a':
-                args.m_artist = optarg;
-                break;
-            case 't':
-                args.m_title = optarg;
-                break;
-            case 'A':
-                args.m_album = optarg;
-                break;
-            case 'y':
-                args.m_year = optarg;
-                if (!is_valid_int(*args.m_year))
-                    throw arguments_parse_exception("Invalid year specification: "s + optarg);
-                break;
-            case 'T':
-                args.m_track = optarg;
-                if (!is_valid_int(*args.m_track))
-                    throw arguments_parse_exception("Invalid track specification: "s + optarg);
-                break;
-            case 'g':
-                args.m_genre = optarg;
-                break;
-            case 'c':
-                args.m_comment = optarg;
-                break;
-            default:
-                throw arguments_parse_exception();
-            }
-        }
-
-        if (optind == argc)
-            throw arguments_parse_exception("Missing file argument.");
-
-        args.m_file_name = argv[optind++];
-
-        if (optind != argc)
-            throw arguments_parse_exception("Only one file at the time may be specified.");
+        app.add_option("file", args.m_file_name,       "File to process")
+          ->check(CLI::ExistingFile);
 
         return args;
-    }
-
-    bool is_help() const
-    {
-        return m_help;
-    }
-
-    bool is_version() const
-    {
-        return m_version;
     }
 
     const std::string& file_name() const
@@ -153,14 +85,14 @@ public:
         return { m_album.has_value(), m_album.value_or("") };
     }
 
-    std::pair<bool, std::string> year() const
+    std::pair<bool, int> year() const
     {
-        return { m_year.has_value(), m_year.value_or("") };
+        return { m_year.has_value(), m_year.value_or(0) };
     }
 
-    std::pair<bool, std::string> track() const
+    std::pair<bool, int> track() const
     {
-        return { m_track.has_value(), m_track.value_or("") };
+        return { m_track.has_value(), m_track.value_or(0) };
     }
 
     std::pair<bool, std::string> genre() const
@@ -174,14 +106,12 @@ public:
     }
 
 private:
-    bool m_help;
-    bool m_version;
     std::string m_file_name;
     std::optional<std::string> m_artist;
     std::optional<std::string> m_title;
     std::optional<std::string> m_album;
-    std::optional<std::string> m_year;
-    std::optional<std::string> m_track;
+    std::optional<int> m_year;
+    std::optional<int> m_track;
     std::optional<std::string> m_genre;
     std::optional<std::string> m_comment;
 };
