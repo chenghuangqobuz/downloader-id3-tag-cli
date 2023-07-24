@@ -147,9 +147,9 @@ public:
         return { m_disctotal.has_value(), m_disctotal.value_or(0) };
     }
 
-    std::pair<bool, int> trackId() const
+    std::pair<bool, std::string> trackId() const
     {
-        return { m_trackId.has_value(), m_trackId.value_or(0) };
+        return { m_trackId.has_value(), m_trackId.value_or("") };
     }
 
 private:
@@ -174,5 +174,5 @@ private:
     std::optional<int> m_tracktotal;
     std::optional<int> m_discnumber;
     std::optional<int> m_disctotal;
-    std::optional<int> m_trackId;
+    std::optional<std::string> m_trackId;
 };

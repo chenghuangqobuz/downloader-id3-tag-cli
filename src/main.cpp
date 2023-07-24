@@ -12,6 +12,7 @@ TAGLIB_HEADERS_BEGIN
   #include <taglib/tpropertymap.h>
   #include <taglib/asftag.h>
   #include <taglib/id3v2tag.h>
+  #include <taglib/id3v2frame.h>
   #include <taglib/mp4tag.h>
   #include <taglib/xiphcomment.h>
   #include "tagunion.h"
@@ -152,7 +153,11 @@ void print_tag_items(TagLib::Tag* tag)
         TagLib::ID3v2::Tag* t = dynamic_cast<TagLib::ID3v2::Tag*>(tag);
         const TagLib::ID3v2::FrameListMap& flm = t->frameListMap();
         for(TagLib::ID3v2::FrameListMap::ConstIterator i = flm.begin(); i != flm.end(); ++i)
+        {
             std::cout << i->first << std::endl;
+            for(TagLib::ID3v2::FrameList::ConstIterator j = i->second.begin(); j != i->second.end(); ++j)
+                std::cout << "   " << (*j)->toString().to8Bit(true) << std::endl;
+        }
     }
     if (typeid(*tag) == typeid(TagLib::MP4::Tag))
     {
@@ -241,7 +246,7 @@ bool process_file(arguments&& args)
     processed |= process_field(f, "OWNER", args.license(), utf8string);
     processed |= process_field(f, "ENCODEDBY", args.encodedby(), utf8string);
     processed |= process_field(f, "ISRC", args.isrc(), utf8string);
-    
+    processed |= process_field(f, "QBZ:TID", args.trackId(), utf8string);
     
     // Add picture
     auto [picture_valid, picture] = args.picture();
