@@ -13,6 +13,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(Taglib REQUIRED)
+find_package(ZLIB REQUIRED)
 
 include(FetchContent)
 macro(fetch_dependency name repo tag)
@@ -34,5 +35,6 @@ add_executable(id3-tag-cli
   src/arguments.hpp
   src/help.hpp
   src/main.cpp
-  src/platform.hpp)
-target_link_libraries(id3-tag-cli Taglib::Taglib CLI11)
+  src/platform.hpp
+  src/tagunion.h)
+target_link_libraries(id3-tag-cli Taglib::Taglib CLI11 ZLIB::ZLIB)

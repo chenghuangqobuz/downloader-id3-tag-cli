@@ -22,7 +22,7 @@ function build_taglib {
         -DCMAKE_INSTALL_PREFIX=${LOCAL_DIR}/taglib \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-        -DWITH_ZLIB=OFF -DBUILD_TESTING=OFF \
+        -DWITH_ZLIB=ON -DBUILD_TESTING=OFF \
         -DBUILD_EXAMPLES=ON \
         ..
     rm -rf ${LOCAL_DIR}/taglib

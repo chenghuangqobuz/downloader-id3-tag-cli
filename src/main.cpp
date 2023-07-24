@@ -8,7 +8,13 @@
 TAGLIB_HEADERS_BEGIN
   #include <taglib/tag.h>
   #include <taglib/fileref.h>
+  #include <taglib/tfilestream.h>
   #include <taglib/tpropertymap.h>
+  #include <taglib/asftag.h>
+  #include <taglib/id3v2tag.h>
+  #include <taglib/mp4tag.h>
+  #include <taglib/xiphcomment.h>
+  #include "tagunion.h"
 TAGLIB_HEADERS_END
 
 #include "arguments.hpp"
@@ -45,6 +51,12 @@ void checkForRejectedProperties(const TagLib::PropertyMap &tags)
     }
 }
 
+TagLib::ByteVector loadFile(const TagLib::FileName& filename)
+{
+    TagLib::FileStream in(filename, true);
+    return in.readBlock(in.length());
+}
+
 // Additional tags from https://docs.mp3tag.de/mapping/
 // https://taglib.org/api/classTagLib_1_1PropertyMap.html
 template<typename ValueF, typename ConvF>
@@ -66,6 +78,117 @@ template<typename T>
 void print_field(const std::string& field_name, const T& field_value)
 {
     std::cout << field_name << ": " << field_value << std::endl;
+}
+
+bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
+{
+    if (tag == nullptr || data.size() == 0)
+        return false;
+    
+    if (typeid(*tag) == typeid(TagLib::ID3v2::Tag))
+    {
+        TagLib::ID3v2::Tag* t = dynamic_cast<TagLib::ID3v2::Tag*>(tag);
+        const TagLib::ID3v2::FrameListMap& flm = t->frameListMap();
+        
+        // Delete the current images
+        t->removeFrames("APIC");
+        
+        TagLib::ID3v2::AttachedPictureFrame* frame = new TagLib::ID3v2::AttachedPictureFrame();
+        frame->setType(TagLib::ID3v2::AttachedPictureFrame::FrontCover);
+        frame->setMimeType("image/jpeg");
+        frame->setPicture(data);
+        t->addFrame(frame);
+    }
+    if (typeid(*tag) == typeid(TagLib::MP4::Tag))
+    {
+        TagLib::MP4::Tag* t = dynamic_cast<TagLib::MP4::Tag*>(tag);
+        TagLib::MP4::CoverArt ca(TagLib::MP4::CoverArt::JPEG, data);
+        TagLib::MP4::CoverArtList cal;
+        cal.append(ca);
+        TagLib::MP4::Item item(cal);
+        t->setItem("covr", item);
+    }
+    if (typeid(*tag) == typeid(TagLib::ASF::Tag))
+    {
+        TagLib::ASF::Tag* t = dynamic_cast<TagLib::ASF::Tag*>(tag);
+        TagLib::ASF::Picture picture;
+        picture.setMimeType("image/jpeg");
+        picture.setType(TagLib::ASF::Picture::Type::FrontCover);
+        picture.setPicture(data);
+        t->setAttribute("WM/Picture", picture);
+    }
+    if (typeid(*tag) == typeid(TagLib::Ogg::XiphComment))
+    {
+        TagLib::Ogg::XiphComment* t = dynamic_cast<TagLib::Ogg::XiphComment*>(tag);
+        t->removeAllPictures();
+        
+        TagLib::FLAC::Picture* pic = new TagLib::FLAC::Picture();
+        pic->setType(TagLib::FLAC::Picture::FrontCover);
+        pic->setMimeType("image/jpeg");
+        pic->setColorDepth(24);
+        pic->setData(data);
+        t->addPicture(pic);
+    }
+    if (typeid(*tag) == typeid(TagLib::TagUnion))
+    {
+        TagLib::TagUnion* t = dynamic_cast<TagLib::TagUnion*>(tag);
+        setPicture((*t)[0], data);
+        setPicture((*t)[1], data);
+        setPicture((*t)[2], data);
+    }
+    
+    return true;
+}
+
+void print_tag_items(TagLib::Tag* tag)
+{
+    if (tag == nullptr)
+        return;
+
+    std::cout << typeid(*tag).name() << std::endl;
+
+    if (typeid(*tag) == typeid(TagLib::ID3v2::Tag))
+    {
+        TagLib::ID3v2::Tag* t = dynamic_cast<TagLib::ID3v2::Tag*>(tag);
+        const TagLib::ID3v2::FrameListMap& flm = t->frameListMap();
+        for(TagLib::ID3v2::FrameListMap::ConstIterator i = flm.begin(); i != flm.end(); ++i)
+            std::cout << i->first << std::endl;
+    }
+    if (typeid(*tag) == typeid(TagLib::MP4::Tag))
+    {
+        TagLib::MP4::Tag* t = dynamic_cast<TagLib::MP4::Tag*>(tag);
+        const TagLib::MP4::ItemMap& im = t->itemMap();
+        for(TagLib::MP4::ItemMap::ConstIterator i = im.begin(); i != im.end(); ++i)
+            std::cout << i->first << std::endl;
+    }
+    if (typeid(*tag) == typeid(TagLib::ASF::Tag))
+    {
+        TagLib::ASF::Tag* t = dynamic_cast<TagLib::ASF::Tag*>(tag);
+        TagLib::ASF::AttributeListMap& alm = t->attributeListMap();
+        for(TagLib::ASF::AttributeListMap::ConstIterator i = alm.begin(); i != alm.end(); ++i)
+            std::cout << i->first << std::endl;
+    }
+    if (typeid(*tag) == typeid(TagLib::Ogg::XiphComment))
+    {
+        TagLib::Ogg::XiphComment* t = dynamic_cast<TagLib::Ogg::XiphComment*>(tag);
+        const TagLib::Ogg::FieldListMap& flm = t->fieldListMap();
+        for(TagLib::Ogg::FieldListMap::ConstIterator i = flm.begin(); i != flm.end(); ++i)
+        {
+            std::cout << i->first << std::endl;
+            for(TagLib::StringList::ConstIterator j = i->second.begin(); j != i->second.end(); ++j)
+                std::cout << "   " << j->to8Bit(true) << std::endl;
+        }
+        
+        TagLib::List<TagLib::FLAC::Picture*> pl = t->pictureList();
+        std::cout << "Num pictures: " << pl.size() << std::endl;
+    }
+    if (typeid(*tag) == typeid(TagLib::TagUnion))
+    {
+        TagLib::TagUnion* t = dynamic_cast<TagLib::TagUnion*>(tag);
+        print_tag_items((*t)[0]);
+        print_tag_items((*t)[1]);
+        print_tag_items((*t)[2]);
+    }
 }
 
 bool process_file(arguments&& args)
@@ -118,8 +241,17 @@ bool process_file(arguments&& args)
     processed |= process_field(f, "OWNER", args.license(), utf8string);
     processed |= process_field(f, "ENCODEDBY", args.encodedby(), utf8string);
     processed |= process_field(f, "ISRC", args.isrc(), utf8string);
+    
+    
+    // Add picture
+    auto [picture_valid, picture] = args.picture();
+    if (picture_valid)
+    {
+        TagLib::FileName filename(picture.c_str());
+        TagLib::ByteVector data = loadFile(filename);
+        processed |= setPicture(file.tag(), data);
+    }
 
-    //processed |= process_field(f, TagField::PICTURE, args.picture(), utf8string);
     //processed |= process_field(f, TagField::TRACKID, args.trackId(), itoi);
 
     if (processed)
@@ -130,6 +262,7 @@ bool process_file(arguments&& args)
 
     if (!file.isNull() && file.tag())
     {
+        std::cout << typeid(*f).name() << std::endl;
         std::cout << "Information for file " << file_name << std::endl;
         print_field(" Artist", tag.artist().to8Bit(true));
         print_field("  Title", tag.title().to8Bit(true));
@@ -150,6 +283,9 @@ bool process_file(arguments&& args)
         for(TagLib::PropertyMap::ConstIterator i = tags.begin(); i != tags.end(); ++i)
             for(TagLib::StringList::ConstIterator j = i->second.begin(); j != i->second.end(); ++j)
                 std::cout << std::left << std::setw(longest) << i->first << " - " << '"' << j->to8Bit(true) << '"' << std::endl;
+        
+        std::cout << "-- TAG (format specific names) --" << std::endl;
+        print_tag_items(file.tag());
     }
 
     if (!file.isNull() && file.audioProperties())
@@ -202,8 +338,7 @@ int MAIN(int argc, platform::char_t* argv[])
 
     if (!process_file(std::move(args)))
     {
-        std::cerr << "Couldn't process given file" << std::endl;
-        std::cerr << app.help();
+        std::cerr << "Couldn't process given file " << args.file_name() << std::endl;
         return RETURN_ERROR;
     }
 }
