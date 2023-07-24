@@ -7,38 +7,8 @@
 
 #include "help.hpp"
 
-struct arguments_parse_exception final : std::runtime_error
-{
-    arguments_parse_exception()
-        : runtime_error("")
-    {
-    }
-
-    explicit arguments_parse_exception(const std::string& msg)
-        : runtime_error(msg)
-    {
-    }
-
-    explicit arguments_parse_exception(const char* const msg)
-        : runtime_error(msg)
-    {
-    }
-};
-
 class arguments
 {
-    static bool is_valid_int(const std::string& str)
-    {
-        try
-        {
-            return std::stoi(optarg) >= 0;
-        }
-        catch (const std::invalid_argument&)
-        {
-            return false;
-        }
-    }
-
 public:
     static void parse_args(CLI::App& app, int argc, char** argv, arguments& args)
     {
@@ -56,22 +26,20 @@ public:
         app.add_option("-g,--genre", args.m_genre,     "Sets the Genre.")->group("Tags");
         app.add_option("-c,--comment", args.m_comment, "Sets the Description/Comment.")->group("Tags");
         
-        app.add_option("--work", args.m_work, "")->group("Tags");
-        app.add_option("--albumArtist", args.m_albumArtist, "")->group("Tags");
+        app.add_option("--albumArtist,--performer", args.m_albumArtist, "")->group("Tags");
+        app.add_option("--composer", args.m_composer, "")->group("Tags");
+        app.add_option("--copyright", args.m_copyright, "")->group("Tags");
         app.add_option("--discnumber", args.m_discnumber, "")->group("Tags");
         app.add_option("--disctotal", args.m_disctotal, "")->group("Tags");
-        app.add_option("--tracknumber", args.m_tracknumber, "")->group("Tags");
-        app.add_option("--tracktotal", args.m_tracktotal, "")->group("Tags");
-        app.add_option("--composer", args.m_composer, "")->group("Tags");
-        app.add_option("--performer", args.m_performer, "")->group("Tags");
-        app.add_option("--copyright", args.m_copyright, "")->group("Tags");
-        app.add_option("--license", args.m_license, "")->group("Tags");
         app.add_option("--encodedby", args.m_encodedby, "")->group("Tags");
         app.add_option("--isrc", args.m_isrc, "")->group("Tags");
-        app.add_option("--trackId", args.m_trackId, "")->group("Tags");
-
+        app.add_option("--license,--owner", args.m_license, "")->group("Tags");
         app.add_option("-p,--picture", args.m_picture, "Sets Picture contained in file.")->group("Tags")
           ->check(CLI::ExistingFile);
+        app.add_option("--trackId", args.m_trackId, "")->group("Tags");
+        app.add_option("--tracknumber", args.m_tracknumber, "")->group("Tags");
+        app.add_option("--tracktotal", args.m_tracktotal, "")->group("Tags");
+        app.add_option("--work,--subtitle", args.m_work, "")->group("Tags");
 
         app.add_option("file", args.m_file_name,       "File to process")
           ->check(CLI::ExistingFile);
@@ -132,11 +100,6 @@ public:
     std::pair<bool, std::string> composer() const
     {
         return { m_composer.has_value(), m_composer.value_or("") };
-    }
-
-    std::pair<bool, std::string> performer() const
-    {
-        return { m_performer.has_value(), m_performer.value_or("") };
     }
 
     std::pair<bool, std::string> copyright() const
@@ -201,7 +164,6 @@ private:
     std::optional<std::string> m_genre;
     std::optional<std::string> m_comment;
     std::optional<std::string> m_composer;
-    std::optional<std::string> m_performer;
     std::optional<std::string> m_copyright;
     std::optional<std::string> m_license;
     std::optional<std::string> m_encodedby;
