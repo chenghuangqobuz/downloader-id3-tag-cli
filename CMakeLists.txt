@@ -13,7 +13,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(Taglib REQUIRED)
-find_package(ZLIB REQUIRED)
+find_package(ZLIB)
 
 include(FetchContent)
 macro(fetch_dependency name repo tag)
@@ -28,7 +28,8 @@ macro(fetch_dependency name repo tag)
   endif()
 endmacro()
 
-fetch_dependency(cli11 https://github.com/CLIUtils/CLI11.git v2.3.2)
+# Need a recent version for Unicode support
+fetch_dependency(cli11 https://github.com/CLIUtils/CLI11.git 3cd730b18b563fdd48cd95dfb0174551aa18c3b3)
 add_subdirectory(${cli11_SOURCE_DIR})
 
 add_executable(id3-tag-cli
@@ -37,4 +38,8 @@ add_executable(id3-tag-cli
   src/main.cpp
   src/platform.hpp
   src/tagunion.h)
-target_link_libraries(id3-tag-cli Taglib::Taglib CLI11 ZLIB::ZLIB)
+target_link_libraries(id3-tag-cli Taglib::Taglib CLI11)
+target_compile_definitions(id3-tag-cli PUBLIC TAGLIB_STATIC)
+if (ZLIB_FOUND)
+  target_link_libraries(id3-tag-cli ZLIB::ZLIB)
+endif()

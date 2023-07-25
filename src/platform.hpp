@@ -20,9 +20,6 @@
   #include <Windows.h>
   #include <io.h>
   #include <fcntl.h>
-#define MAIN wmain
-#else
-#define MAIN main
 #endif
 
 namespace platform
@@ -51,4 +48,41 @@ namespace platform
 #else
     static_assert("Error: Unknown platform");
 #endif
+
+    struct convert
+    {
+        static std::vector<std::string> convert_args(int argc, platform::char_t** argv)
+        {
+            std::vector<std::string> args;
+            for (int i = 0; i < argc; ++i)
+                args.push_back(from_platform(argv[i]));
+            return args;
+        }
+
+        static std::string from_platform(const platform::char_t* str)
+        {
+#ifdef _WIN32
+            int required_size = ::WideCharToMultiByte(CP_UTF8, 0, str, -1, nullptr, 0, nullptr, nullptr);
+            std::string result(required_size, '\0');
+            ::WideCharToMultiByte(CP_UTF8, 0, str, -1, result.data(), result.size(), nullptr, nullptr);
+            result.resize(required_size - 1); // '\0'
+            return result;
+#else
+            return str;
+#endif
+        }
+
+        static platform::string to_platform(const std::string& str)
+        {
+#ifdef _WIN32
+            int required_size = ::MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, nullptr, 0);
+            platform::string result(required_size, L'\0');
+            ::MultiByteToWideChar(CP_UTF8, 0, str.data(), -1, result.data(), result.size());
+            result.resize(required_size - 1); // L'\0'
+            return result;
+#else
+            return str;
+#endif
+        }
+    };
 }

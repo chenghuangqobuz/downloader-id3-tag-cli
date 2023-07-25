@@ -3,14 +3,12 @@
 #include <optional>
 #include <exception>
 
-#include <getopt.h>
-
 #include "help.hpp"
 
 class arguments
 {
 public:
-    static void parse_args(CLI::App& app, int argc, char** argv, arguments& args)
+    static void parse_args(CLI::App& app, arguments& args)
     {
         app.set_config("--config");
 
@@ -43,8 +41,6 @@ public:
 
         app.add_option("file", args.m_file_name,       "File to process")
           ->check(CLI::ExistingFile);
-
-        return args;
     }
 
     const std::string& file_name() const

@@ -49,8 +49,8 @@ find_library(Taglib_LIBRARIES
 set(Taglib_VERSION ${PC_TAGLIB_VERSION})
 
 if (Taglib_INCLUDE_DIRS AND NOT Taglib_VERSION)
-    if(EXISTS "${Taglib_INCLUDE_DIRS}/taglib.h")
-        file(READ "${Taglib_INCLUDE_DIRS}/taglib.h" TAGLIB_H)
+    if(EXISTS "${Taglib_INCLUDE_DIRS}/taglib/taglib.h")
+        file(READ "${Taglib_INCLUDE_DIRS}/taglib/taglib.h" TAGLIB_H)
 
         string(REGEX MATCH "#define TAGLIB_MAJOR_VERSION[ ]+[0-9]+" TAGLIB_MAJOR_VERSION_MATCH ${TAGLIB_H})
         string(REGEX MATCH "#define TAGLIB_MINOR_VERSION[ ]+[0-9]+" TAGLIB_MINOR_VERSION_MATCH ${TAGLIB_H})

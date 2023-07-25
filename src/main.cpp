@@ -85,15 +85,15 @@ bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
 {
     if (tag == nullptr || data.size() == 0)
         return false;
-    
+
     if (typeid(*tag) == typeid(TagLib::ID3v2::Tag))
     {
         TagLib::ID3v2::Tag* t = dynamic_cast<TagLib::ID3v2::Tag*>(tag);
         const TagLib::ID3v2::FrameListMap& flm = t->frameListMap();
-        
+
         // Delete the current images
         t->removeFrames("APIC");
-        
+
         TagLib::ID3v2::AttachedPictureFrame* frame = new TagLib::ID3v2::AttachedPictureFrame();
         frame->setType(TagLib::ID3v2::AttachedPictureFrame::FrontCover);
         frame->setMimeType("image/jpeg");
@@ -122,7 +122,7 @@ bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
     {
         TagLib::Ogg::XiphComment* t = dynamic_cast<TagLib::Ogg::XiphComment*>(tag);
         t->removeAllPictures();
-        
+
         TagLib::FLAC::Picture* pic = new TagLib::FLAC::Picture();
         pic->setType(TagLib::FLAC::Picture::FrontCover);
         pic->setMimeType("image/jpeg");
@@ -137,7 +137,7 @@ bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
         setPicture((*t)[1], data);
         setPicture((*t)[2], data);
     }
-    
+
     return true;
 }
 
@@ -183,7 +183,7 @@ void print_tag_items(TagLib::Tag* tag)
             for(TagLib::StringList::ConstIterator j = i->second.begin(); j != i->second.end(); ++j)
                 std::cout << "   " << j->to8Bit(true) << std::endl;
         }
-        
+
         TagLib::List<TagLib::FLAC::Picture*> pl = t->pictureList();
         std::cout << "Num pictures: " << pl.size() << std::endl;
     }
@@ -198,12 +198,12 @@ void print_tag_items(TagLib::Tag* tag)
 
 bool process_file(arguments&& args)
 {
-    platform::string file_name = args.file_name();
+    platform::string file_name = platform::convert::to_platform(args.file_name());
     TagLib::FileRef file(file_name.c_str());
-    
+
     if (file.isNull())
         return false;
-    
+
     TagLib::File* f = file.file();
     if (f == nullptr)
         return false;
@@ -220,7 +220,7 @@ bool process_file(arguments&& args)
     {
         return i;
     };
-    
+
     auto itos = [](const int& i) -> std::string
     {
         return std::to_string(i);
@@ -247,7 +247,7 @@ bool process_file(arguments&& args)
     processed |= process_field(f, "ENCODEDBY", args.encodedby(), utf8string);
     processed |= process_field(f, "ISRC", args.isrc(), utf8string);
     processed |= process_field(f, "QBZ:TID", args.trackId(), utf8string);
-    
+
     // Add picture
     auto [picture_valid, picture] = args.picture();
     if (picture_valid)
@@ -278,17 +278,17 @@ bool process_file(arguments&& args)
         print_field("Comment", tag.comment().to8Bit(true));
 
         TagLib::PropertyMap tags = f->properties();
-        
+
         unsigned int longest = 0;
         for(TagLib::PropertyMap::ConstIterator i = tags.begin(); i != tags.end(); ++i)
             if (i->first.size() > longest)
                 longest = i->first.size();
-        
+
         std::cout << "-- TAG (properties) --" << std::endl;
         for(TagLib::PropertyMap::ConstIterator i = tags.begin(); i != tags.end(); ++i)
             for(TagLib::StringList::ConstIterator j = i->second.begin(); j != i->second.end(); ++j)
                 std::cout << std::left << std::setw(longest) << i->first << " - " << '"' << j->to8Bit(true) << '"' << std::endl;
-        
+
         std::cout << "-- TAG (format specific names) --" << std::endl;
         print_tag_items(file.tag());
     }
@@ -296,10 +296,10 @@ bool process_file(arguments&& args)
     if (!file.isNull() && file.audioProperties())
     {
         TagLib::AudioProperties *properties = file.audioProperties();
-        
+
         int seconds = properties->length() % 60;
         int minutes = (properties->length() - seconds) / 60;
-        
+
         std::cout << "-- AUDIO --" << std::endl;
         std::cout << "bitrate     - " << properties->bitrate() << std::endl;
         std::cout << "sample rate - " << properties->sampleRate() << std::endl;
@@ -313,7 +313,11 @@ bool process_file(arguments&& args)
 constexpr static const int RETURN_OK = 0;
 constexpr static const int RETURN_ERROR = 1;
 
-int MAIN(int argc, platform::char_t* argv[])
+#ifdef _WIN32
+int wmain(int argc, wchar_t* argv[])
+#else
+int main(int argc, char* argv[])
+#endif
 {
     CLI::App app("id3-tag-cli");
     app.footer("If no argument is specified, information of given file is retrieved.\n"
@@ -321,20 +325,20 @@ int MAIN(int argc, platform::char_t* argv[])
                "If the argument is empty string (\"\") (for [STR]) or 0 (for [INT]) the value is cleared.\n"
                "\n"
                "Written by Zereges <https://github.com/Zereges/id3-tag-cli>");
-    
+
     arguments args;
     try
     {
-        arguments::parse_args(app, argc, argv, args);
+        arguments::parse_args(app, args);
     }
     catch (const CLI::Error& ex)
     {
         std::cerr << CLI::FailureMessage::help(&app, ex);
         return RETURN_ERROR;
     }
-    
+
     CLI11_PARSE(app, argc, argv);
-    
+
     if (app.get_option("--print")->as<bool>())
     {
         std::cout << app.config_to_str(true, true);
