@@ -319,6 +319,14 @@ int wmain(int argc, wchar_t* argv[])
 int main(int argc, char* argv[])
 #endif
 {
+#ifdef _WIN32
+    // Set console code page to UTF-8 so console known how to interpret string data
+    SetConsoleOutputCP(CP_UTF8);
+
+    // Enable buffering to prevent VS from chopping up UTF-8 byte sequences
+    setvbuf(stdout, nullptr, _IOFBF, 1000);
+#endif
+
     CLI::App app("id3-tag-cli");
     app.footer("If no argument is specified, information of given file is retrieved.\n"
                "If the option is not specified, the value is unchanged.\n"
