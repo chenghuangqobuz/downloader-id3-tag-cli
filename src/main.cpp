@@ -11,6 +11,7 @@ TAGLIB_HEADERS_BEGIN
   #include <taglib/tfilestream.h>
   #include <taglib/tpropertymap.h>
   #include <taglib/asftag.h>
+  #include <taglib/flacfile.h>
   #include <taglib/id3v2tag.h>
   #include <taglib/id3v2frame.h>
   #include <taglib/mp4tag.h>
@@ -54,6 +55,9 @@ void checkForRejectedProperties(const TagLib::PropertyMap &tags)
 
 TagLib::ByteVector loadFile(const TagLib::FileName& filename)
 {
+    if (strlen(filename) == 0)
+        return TagLib::ByteVector();
+
     TagLib::FileStream in(filename, true);
     return in.readBlock(in.length());
 }
@@ -83,52 +87,65 @@ void print_field(const std::string& field_name, const T& field_value)
 
 bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
 {
-    if (tag == nullptr || data.size() == 0)
+    if (tag == nullptr)
         return false;
 
     if (typeid(*tag) == typeid(TagLib::ID3v2::Tag))
     {
         TagLib::ID3v2::Tag* t = dynamic_cast<TagLib::ID3v2::Tag*>(tag);
-        const TagLib::ID3v2::FrameListMap& flm = t->frameListMap();
-
-        // Delete the current images
         t->removeFrames("APIC");
 
-        TagLib::ID3v2::AttachedPictureFrame* frame = new TagLib::ID3v2::AttachedPictureFrame();
-        frame->setType(TagLib::ID3v2::AttachedPictureFrame::FrontCover);
-        frame->setMimeType("image/jpeg");
-        frame->setPicture(data);
-        t->addFrame(frame);
+        if (!data.isEmpty())
+        {
+            TagLib::ID3v2::AttachedPictureFrame* frame = new TagLib::ID3v2::AttachedPictureFrame();
+            frame->setType(TagLib::ID3v2::AttachedPictureFrame::FrontCover);
+            frame->setMimeType("image/jpeg");
+            frame->setPicture(data);
+            t->addFrame(frame);
+        }
     }
     if (typeid(*tag) == typeid(TagLib::MP4::Tag))
     {
         TagLib::MP4::Tag* t = dynamic_cast<TagLib::MP4::Tag*>(tag);
-        TagLib::MP4::CoverArt ca(TagLib::MP4::CoverArt::JPEG, data);
-        TagLib::MP4::CoverArtList cal;
-        cal.append(ca);
-        TagLib::MP4::Item item(cal);
-        t->setItem("covr", item);
+        t->removeItem("covr");
+
+        if (!data.isEmpty())
+        {
+            TagLib::MP4::CoverArt ca(TagLib::MP4::CoverArt::JPEG, data);
+            TagLib::MP4::CoverArtList cal;
+            cal.append(ca);
+            TagLib::MP4::Item item(cal);
+            t->setItem("covr", item);
+        }
     }
     if (typeid(*tag) == typeid(TagLib::ASF::Tag))
     {
         TagLib::ASF::Tag* t = dynamic_cast<TagLib::ASF::Tag*>(tag);
-        TagLib::ASF::Picture picture;
-        picture.setMimeType("image/jpeg");
-        picture.setType(TagLib::ASF::Picture::Type::FrontCover);
-        picture.setPicture(data);
-        t->setAttribute("WM/Picture", picture);
+        t->removeItem("WM/Picture");
+
+        if (!data.isEmpty())
+        {
+            TagLib::ASF::Picture picture;
+            picture.setMimeType("image/jpeg");
+            picture.setType(TagLib::ASF::Picture::Type::FrontCover);
+            picture.setPicture(data);
+            t->setAttribute("WM/Picture", picture);
+        }
     }
     if (typeid(*tag) == typeid(TagLib::Ogg::XiphComment))
     {
         TagLib::Ogg::XiphComment* t = dynamic_cast<TagLib::Ogg::XiphComment*>(tag);
         t->removeAllPictures();
 
-        TagLib::FLAC::Picture* pic = new TagLib::FLAC::Picture();
-        pic->setType(TagLib::FLAC::Picture::FrontCover);
-        pic->setMimeType("image/jpeg");
-        pic->setColorDepth(24);
-        pic->setData(data);
-        t->addPicture(pic);
+        if (!data.isEmpty())
+        {
+            TagLib::FLAC::Picture* pic = new TagLib::FLAC::Picture();
+            pic->setType(TagLib::FLAC::Picture::FrontCover);
+            pic->setMimeType("image/jpeg");
+            pic->setColorDepth(24);
+            pic->setData(data);
+            t->addPicture(pic);
+        }
     }
     if (typeid(*tag) == typeid(TagLib::TagUnion))
     {
@@ -252,6 +269,13 @@ bool process_file(arguments&& args)
     auto [picture_valid, picture] = args.picture();
     if (picture_valid)
     {
+        // Remove pictures in other data blocks
+        if (typeid(*f) == typeid(TagLib::FLAC::File))
+        {
+            TagLib::FLAC::File* ff = dynamic_cast<TagLib::FLAC::File*>(f);
+            ff->removePictures();
+        }
+
         TagLib::FileName filename(picture.c_str());
         TagLib::ByteVector data = loadFile(filename);
         processed |= setPicture(file.tag(), data);

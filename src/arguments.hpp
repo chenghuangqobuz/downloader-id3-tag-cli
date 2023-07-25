@@ -32,8 +32,7 @@ public:
         app.add_option("--encodedby", args.m_encodedby, "")->group("Tags");
         app.add_option("--isrc", args.m_isrc, "")->group("Tags");
         app.add_option("--license,--owner", args.m_license, "")->group("Tags");
-        app.add_option("-p,--picture", args.m_picture, "Sets Picture contained in file.")->group("Tags")
-          ->check(CLI::ExistingFile);
+        app.add_option("-p,--picture", args.m_picture, "Sets Picture contained in file.")->group("Tags");
         app.add_option("--trackId", args.m_trackId, "")->group("Tags");
         app.add_option("--tracknumber", args.m_tracknumber, "")->group("Tags");
         app.add_option("--tracktotal", args.m_tracktotal, "")->group("Tags");
