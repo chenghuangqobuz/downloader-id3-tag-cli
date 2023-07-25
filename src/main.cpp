@@ -53,12 +53,12 @@ void checkForRejectedProperties(const TagLib::PropertyMap &tags)
     }
 }
 
-TagLib::ByteVector loadFile(const TagLib::FileName& filename)
+TagLib::ByteVector loadFile(const std::string& filename)
 {
-    if (strlen(filename) == 0)
+    if (filename.empty())
         return TagLib::ByteVector();
 
-    TagLib::FileStream in(filename, true);
+    TagLib::FileStream in(filename.c_str(), true);
     return in.readBlock(in.length());
 }
 
@@ -284,8 +284,7 @@ bool process_file(arguments&& args)
     auto [picture_valid, picture] = args.picture();
     if (picture_valid)
     {
-        TagLib::FileName filename(picture.c_str());
-        TagLib::ByteVector data = loadFile(filename);
+        TagLib::ByteVector data = loadFile(picture);
         processed |= setPicture(f, data);
     }
 
