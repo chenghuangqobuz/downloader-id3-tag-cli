@@ -136,16 +136,6 @@ bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
     {
         TagLib::Ogg::XiphComment* t = dynamic_cast<TagLib::Ogg::XiphComment*>(tag);
         t->removeAllPictures();
-
-        if (!data.isEmpty())
-        {
-            TagLib::FLAC::Picture* pic = new TagLib::FLAC::Picture();
-            pic->setType(TagLib::FLAC::Picture::FrontCover);
-            pic->setMimeType("image/jpeg");
-            pic->setColorDepth(24);
-            pic->setData(data);
-            t->addPicture(pic);
-        }
     }
     if (typeid(*tag) == typeid(TagLib::TagUnion))
     {
@@ -156,6 +146,31 @@ bool setPicture(TagLib::Tag* tag, const TagLib::ByteVector& data)
     }
 
     return true;
+}
+
+bool setPicture(TagLib::File* file, const TagLib::ByteVector& data)
+{
+    if (file == nullptr)
+        return false;
+
+    // For FLAC, add picture as a new block
+    if (typeid(*file) == typeid(TagLib::FLAC::File))
+    {
+        TagLib::FLAC::File* ff = dynamic_cast<TagLib::FLAC::File*>(file);
+        ff->removePictures();
+
+        if (!data.isEmpty())
+        {
+            TagLib::FLAC::Picture* pic = new TagLib::FLAC::Picture();
+            pic->setType(TagLib::FLAC::Picture::FrontCover);
+            pic->setMimeType("image/jpeg");
+            pic->setColorDepth(24);
+            pic->setData(data);
+            ff->addPicture(pic);
+        }
+    }
+
+    return setPicture(file->tag(), data);
 }
 
 void print_tag_items(TagLib::Tag* tag)
@@ -269,16 +284,9 @@ bool process_file(arguments&& args)
     auto [picture_valid, picture] = args.picture();
     if (picture_valid)
     {
-        // Remove pictures in other data blocks
-        if (typeid(*f) == typeid(TagLib::FLAC::File))
-        {
-            TagLib::FLAC::File* ff = dynamic_cast<TagLib::FLAC::File*>(f);
-            ff->removePictures();
-        }
-
         TagLib::FileName filename(picture.c_str());
         TagLib::ByteVector data = loadFile(filename);
-        processed |= setPicture(file.tag(), data);
+        processed |= setPicture(f, data);
     }
 
     //processed |= process_field(f, TagField::TRACKID, args.trackId(), itoi);
