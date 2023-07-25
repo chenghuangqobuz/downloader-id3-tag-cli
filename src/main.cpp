@@ -11,12 +11,16 @@ TAGLIB_HEADERS_BEGIN
   #include <taglib/tfilestream.h>
   #include <taglib/tpropertymap.h>
   #include <taglib/asftag.h>
-  #include <taglib/flacfile.h>
   #include <taglib/id3v2tag.h>
   #include <taglib/id3v2frame.h>
   #include <taglib/mp4tag.h>
   #include <taglib/xiphcomment.h>
   #include "tagunion.h"
+
+  #include <taglib/aifffile.h>
+  #include <taglib/flacfile.h>
+  #include <taglib/mpegfile.h>
+  #include <taglib/wavfile.h>
 TAGLIB_HEADERS_END
 
 #include "arguments.hpp"
@@ -288,11 +292,26 @@ bool process_file(arguments&& args)
         processed |= setPicture(f, data);
     }
 
-    //processed |= process_field(f, TagField::TRACKID, args.trackId(), itoi);
-
     if (processed)
     {
-        file.save();
+        // Use ID3v2::v3 for more compatibility
+        if (typeid(*f) == typeid(TagLib::MPEG::File))
+        {
+            TagLib::MPEG::File* ff = dynamic_cast<TagLib::MPEG::File*>(f);
+            ff->save(TagLib::MPEG::File::AllTags, TagLib::File::StripOthers, TagLib::ID3v2::v3);
+        }
+        else if (typeid(*f) == typeid(TagLib::RIFF::WAV::File))
+        {
+            TagLib::RIFF::WAV::File* ff = dynamic_cast<TagLib::RIFF::WAV::File*>(f);
+            ff->save(TagLib::RIFF::WAV::File::AllTags, TagLib::File::StripOthers, TagLib::ID3v2::v3);
+        }
+        else if (typeid(*f) == typeid(TagLib::RIFF::AIFF::File))
+        {
+            TagLib::RIFF::AIFF::File* ff = dynamic_cast<TagLib::RIFF::AIFF::File*>(f);
+            ff->save(TagLib::ID3v2::v3);
+        }
+        else
+            file.save();
         return true;
     }
 
