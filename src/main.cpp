@@ -322,7 +322,7 @@ int main(int argc, char* argv[])
     CLI::App app("id3-tag-cli");
     app.footer("If no argument is specified, information of given file is retrieved.\n"
                "If the option is not specified, the value is unchanged.\n"
-               "If the argument is empty string (\"\") (for [STR]) or 0 (for [INT]) the value is cleared.\n"
+               "If the argument is empty string (\"\") (for [TEXT]) or 0 (for [INT]) the value is cleared.\n"
                "\n"
                "Written by Zereges <https://github.com/Zereges/id3-tag-cli>");
 
@@ -337,7 +337,7 @@ int main(int argc, char* argv[])
         return RETURN_ERROR;
     }
 
-    CLI11_PARSE(app, argc, argv);
+    CLI11_PARSE(app);
 
     if (app.get_option("--print")->as<bool>())
     {
