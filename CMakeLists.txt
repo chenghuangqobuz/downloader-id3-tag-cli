@@ -43,3 +43,12 @@ target_compile_definitions(id3-tag-cli PUBLIC TAGLIB_STATIC)
 if (ZLIB_FOUND)
   target_link_libraries(id3-tag-cli ZLIB::ZLIB)
 endif()
+
+if (APPLE)
+  set(BUNDLEIDENTIFIER "net.dotndash.id3-tag-cli")
+  set(EXECUTABLE_NAME "id3-tag-cli")
+  set(BUNDLEVERSION "1.0")
+  configure_file(${CMAKE_SOURCE_DIR}/src/Info.plist.in ${CMAKE_BINARY_DIR}/Info.plist @ONLY)
+  target_link_options(id3-tag-cli PRIVATE
+    LINKER:-sectcreate,__TEXT,__info_plist,${CMAKE_BINARY_DIR}/Info.plist)
+endif()
